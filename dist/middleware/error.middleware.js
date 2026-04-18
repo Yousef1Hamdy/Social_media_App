@@ -1,0 +1,13 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.globalErrorHandler = void 0;
+const globalErrorHandler = (error, req, res, next) => {
+    const status = error.statusCode || 500;
+    return res.status(status).json({
+        message: error.message || "internal serval error",
+        cause: error.cause,
+        stack: error.stack,
+        error,
+    });
+};
+exports.globalErrorHandler = globalErrorHandler;

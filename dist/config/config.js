@@ -1,0 +1,17 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.SMTP_SECURE = exports.SMTP_PORT = exports.SMTP_HOST = exports.SMTP_PASS = exports.SMTP_USER = exports.ENCRYPTION_SECRET_KEY = exports.SALT_ROUND = exports.DB_URI = exports.DB_URL = exports.APPLICATION_NAME = exports.PORT = void 0;
+const dotenv_1 = require("dotenv");
+const node_path_1 = require("node:path");
+(0, dotenv_1.config)({ path: (0, node_path_1.resolve)(`./.env.${process.env.NODE_ENV || "development"}`) });
+exports.PORT = process.env.PORT;
+exports.APPLICATION_NAME = process.env.APPLICATION_NAME;
+exports.DB_URL = process.env.DB_URL;
+exports.DB_URI = process.env.DB_URI;
+exports.SALT_ROUND = Number(process.env.SALT_ROUND ?? 10);
+exports.ENCRYPTION_SECRET_KEY = process.env.ENCRYPTION_SECRET_KEY;
+exports.SMTP_USER = process.env.SMTP_USER;
+exports.SMTP_PASS = process.env.SMTP_PASS;
+exports.SMTP_HOST = process.env.SMTP_HOST;
+exports.SMTP_PORT = process.env.SMTP_PORT;
+exports.SMTP_SECURE = process.env.SMTP_SECURE;

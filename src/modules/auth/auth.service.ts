@@ -1,3 +1,4 @@
+import { TokenService } from './../../common/services/token.service';
 import {
   compareHash,
   ConflictException,
@@ -23,17 +24,50 @@ import {
   ResendConfirmEmailDto,
   SignupDto,
 } from "./auth.dto";
+import { LoginResponse } from './auth.entity';
 
 class AuthenticationService {
   private readonly userRepository: UserRepository;
+  private readonly tokenService: TokenService;
   private readonly redis: RedisService;
   constructor() {
     this.userRepository = new UserRepository(UserModel);
+    this.tokenService = new TokenService()
     this.redis = redisService;
   }
 
-  login = (data: LoginDto): LoginDto => {
-    return data;
+  login = async (inputs: LoginDto, issuer: string):Promise<LoginResponse> => {
+    const { email, password } = inputs;
+
+    const user = await this.userRepository.findOne({
+      filter: {
+        email,
+        confirmEmail: { $exists: true },
+        provider: ProviderEnum.System,
+      },
+      projection: "+password",
+    });
+    if (!user) {
+      throw new NotFoundException("invalid email or password");
+    }
+    const match = await compareHash({
+      plaintext: password,
+      cipherText: user.password,
+    });
+
+    if (!match) {
+      throw new NotFoundException("invalid email or password");
+    }
+
+    const { access_token, refresh_token } = await this.tokenService.createLoginCredentials(
+      user,
+      issuer,
+    );
+
+    return {
+      access_token,
+      refresh_token,
+    };
   };
 
   verifyEmailOtp = async ({

@@ -4,6 +4,7 @@ import { globalErrorHandler } from "./middleware";
 import { connectDB } from "./DB/connected.db";
 import { PORT } from "./config/config";
 import { redisService } from "./common/services/redis.service";
+import { userRouter } from "./modules/user";
 // or
 // import express from "express";
 // import type { Express, Request, Response, NextFunction } from "express";
@@ -29,6 +30,7 @@ const bootstrap = async () => {
 
   // Application-Routing
   app.use("/auth", authRouter);
+  app.use("/user", userRouter);
 
   // global Error Handling
   app.use(globalErrorHandler);

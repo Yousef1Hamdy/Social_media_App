@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.SMTP_SECURE = exports.SMTP_PORT = exports.SMTP_HOST = exports.SMTP_PASS = exports.SMTP_USER = exports.ENCRYPTION_SECRET_KEY = exports.SALT_ROUND = exports.DB_URI = exports.DB_URL = exports.APPLICATION_NAME = exports.PORT = void 0;
+exports.REFRESH_EXPIRE_IN = exports.USER_REFRESH_TOKEN_SECRET_KEY = exports.SYSTEM_REFRESH_TOKEN_SECRET_KEY = exports.ACCESS_EXPIRE_IN = exports.USER_TOKEN_SECRET_KEY = exports.SYSTEM_TOKEN_SECRET_KEY = exports.SMTP_SECURE = exports.SMTP_PORT = exports.SMTP_HOST = exports.SMTP_PASS = exports.SMTP_USER = exports.ENCRYPTION_SECRET_KEY = exports.SALT_ROUND = exports.DB_URI = exports.DB_URL = exports.APPLICATION_NAME = exports.PORT = void 0;
 const dotenv_1 = require("dotenv");
 const node_path_1 = require("node:path");
 (0, dotenv_1.config)({ path: (0, node_path_1.resolve)(`./.env.${process.env.NODE_ENV || "development"}`) });
@@ -15,3 +15,9 @@ exports.SMTP_PASS = process.env.SMTP_PASS;
 exports.SMTP_HOST = process.env.SMTP_HOST;
 exports.SMTP_PORT = process.env.SMTP_PORT;
 exports.SMTP_SECURE = process.env.SMTP_SECURE;
+exports.SYSTEM_TOKEN_SECRET_KEY = process.env.SYSTEM_TOKEN_SECRET_KEY;
+exports.USER_TOKEN_SECRET_KEY = process.env.USER_TOKEN_SECRET_KEY;
+exports.ACCESS_EXPIRE_IN = parseInt(process.env.ACCESS_EXPIRE_IN ?? 1800);
+exports.SYSTEM_REFRESH_TOKEN_SECRET_KEY = process.env.SYSTEM_REFRESH_TOKEN_SECRET_KEY;
+exports.USER_REFRESH_TOKEN_SECRET_KEY = process.env.USER_REFRESH_TOKEN_SECRET_KEY;
+exports.REFRESH_EXPIRE_IN = parseInt(process.env.REFRESH_EXPIRE_IN ?? 1800);

@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.ProviderEnum = exports.RoleEnum = exports.GenderEnum = void 0;
+exports.AudienceEnum = exports.LogoutEnum = exports.TokenTypeEnum = exports.ProviderEnum = exports.RoleEnum = exports.GenderEnum = void 0;
 var GenderEnum;
 (function (GenderEnum) {
     GenderEnum[GenderEnum["MALE"] = 0] = "MALE";
@@ -16,3 +16,19 @@ var ProviderEnum;
     ProviderEnum[ProviderEnum["System"] = 0] = "System";
     ProviderEnum[ProviderEnum["Google"] = 1] = "Google";
 })(ProviderEnum || (exports.ProviderEnum = ProviderEnum = {}));
+var TokenTypeEnum;
+(function (TokenTypeEnum) {
+    TokenTypeEnum[TokenTypeEnum["access"] = 0] = "access";
+    TokenTypeEnum[TokenTypeEnum["refresh"] = 1] = "refresh";
+})(TokenTypeEnum || (exports.TokenTypeEnum = TokenTypeEnum = {}));
+var LogoutEnum;
+(function (LogoutEnum) {
+    LogoutEnum[LogoutEnum["All"] = 0] = "All";
+    LogoutEnum[LogoutEnum["Only"] = 1] = "Only";
+})(LogoutEnum || (exports.LogoutEnum = LogoutEnum = {}));
+var AudienceEnum;
+(function (AudienceEnum) {
+    AudienceEnum[AudienceEnum["System"] = 0] = "System";
+    AudienceEnum[AudienceEnum["User"] = 1] = "User";
+})(AudienceEnum || (exports.AudienceEnum = AudienceEnum = {}));
+;

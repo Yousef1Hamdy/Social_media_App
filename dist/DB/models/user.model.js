@@ -63,6 +63,7 @@ const userSchema = new mongoose_1.Schema({
         default: common_1.ProviderEnum.System,
     },
     confirmEmail: Date,
+    changeCredentialTime: Date,
 }, {
     timestamps: true,
     strict: true,

@@ -1,18 +1,44 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+const token_service_1 = require("./../../common/services/token.service");
 const common_1 = require("../../common");
 const redis_service_1 = require("../../common/services/redis.service");
 const user_model_1 = require("../../DB/models/user.model");
 const user_repository_1 = require("../../DB/repository/user.repository");
 class AuthenticationService {
     userRepository;
+    tokenService;
     redis;
     constructor() {
         this.userRepository = new user_repository_1.UserRepository(user_model_1.UserModel);
+        this.tokenService = new token_service_1.TokenService();
         this.redis = redis_service_1.redisService;
     }
-    login = (data) => {
-        return data;
+    login = async (inputs, issuer) => {
+        const { email, password } = inputs;
+        const user = await this.userRepository.findOne({
+            filter: {
+                email,
+                confirmEmail: { $exists: true },
+                provider: common_1.ProviderEnum.System,
+            },
+            projection: "+password",
+        });
+        if (!user) {
+            throw new common_1.NotFoundException("invalid email or password");
+        }
+        const match = await (0, common_1.compareHash)({
+            plaintext: password,
+            cipherText: user.password,
+        });
+        if (!match) {
+            throw new common_1.NotFoundException("invalid email or password");
+        }
+        const { access_token, refresh_token } = await this.tokenService.createLoginCredentials(user, issuer);
+        return {
+            access_token,
+            refresh_token,
+        };
     };
     verifyEmailOtp = async ({ email, subject = common_1.EmailEnum.ConfirmEmail, title = "Verify Your Account", }) => {
         const blockKey = this.redis.otpBlockKey({ email, type: subject });

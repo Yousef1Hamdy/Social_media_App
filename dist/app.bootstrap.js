@@ -9,6 +9,7 @@ const middleware_1 = require("./middleware");
 const connected_db_1 = require("./DB/connected.db");
 const config_1 = require("./config/config");
 const redis_service_1 = require("./common/services/redis.service");
+const user_1 = require("./modules/user");
 const bootstrap = async () => {
     const app = (0, express_1.default)();
     app.use(express_1.default.json());
@@ -18,6 +19,7 @@ const bootstrap = async () => {
         res.status(200).json({ message: "Landing Page" });
     });
     app.use("/auth", modules_1.authRouter);
+    app.use("/user", user_1.userRouter);
     app.use(middleware_1.globalErrorHandler);
     app.use("/*dummy", (req, res, next) => {
         res.status(404).json({ message: "Invalid Application Routing" });

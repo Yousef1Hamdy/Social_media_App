@@ -73,6 +73,7 @@ const userSchema: Schema<IUser> = new Schema(
       default: ProviderEnum.System,
     },
     confirmEmail: Date,
+    changeCredentialTime : Date,
   },
   {
     timestamps: true,

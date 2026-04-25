@@ -139,5 +139,12 @@ class TokenService {
         }
         return { user, decode };
     };
+    createRevokeToken = async ({ userId, jti, ttl, }) => {
+        await this.redis.set({
+            key: this.redis.revokeTokenKey({ userId, jti }),
+            value: jti,
+            ttl,
+        });
+    };
 }
 exports.TokenService = TokenService;

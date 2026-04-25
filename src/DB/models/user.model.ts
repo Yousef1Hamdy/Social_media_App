@@ -1,5 +1,12 @@
-import { Schema, model, models } from "mongoose";
-import { GenderEnum, IUser, ProviderEnum, RoleEnum } from "../../common";
+import { HydratedDocument, Schema, model, models } from "mongoose";
+import {
+  encrypt,
+  GenderEnum,
+  generateHash,
+  IUser,
+  ProviderEnum,
+  RoleEnum,
+} from "../../common";
 
 const userSchema: Schema<IUser> = new Schema(
   {
@@ -73,7 +80,13 @@ const userSchema: Schema<IUser> = new Schema(
       default: ProviderEnum.System,
     },
     confirmEmail: Date,
-    changeCredentialTime : Date,
+    changeCredentialTime: Date,
+    deletedAt: {
+      type: Date,
+    },
+    restoredAt: {
+      type: Date,
+    },
   },
   {
     timestamps: true,
@@ -95,5 +108,59 @@ userSchema
     this.firstName = firstName as string;
     this.lastName = lastName as string;
   });
+
+userSchema.pre(
+  "save",
+  async function (this: HydratedDocument<IUser> & { wasNew: boolean }) {
+    if (this.isModified("password")) {
+      this.password = await generateHash({ plaintext: this.password });
+    }
+    if (this.phone && this.isModified("phone")) {
+      this.phone = await encrypt(this.phone);
+    }
+  },
+);
+
+// userSchema.post("save", async function () {
+//   const that = this as HydratedDocument<IUser> & { wasNew: boolean };
+//   if (that.wasNew) {
+//   }
+// });
+
+userSchema.pre("findOne" , function(){
+  const query = this.getQuery()
+  if(query.paranoid === false){
+    this.setQuery({...query})
+  }else{
+    this.setQuery({deletedAt : { $exists : false} , ...query})
+  }
+})
+
+userSchema.pre(["updateOne" , "findOneAndUpdate"] , function(){
+  const update = this.getUpdate() as HydratedDocument<IUser>;
+  if(update.deletedAt){
+    this.setUpdate({...update , $unset :{restoredAt : 1}})
+  }
+  if(update.restoredAt){
+    this.setUpdate({...update , $unset :{deletedAt : 1}})
+    this.setQuery({...this.getQuery() , deletedAt : {$exists : true}})
+  }
+  const query = this.getQuery()
+  if(query.paranoid === false){
+    this.setQuery({...query})
+  }else{
+    this.setQuery({deletedAt : { $exists : false} , ...query})
+  }
+})
+
+userSchema.pre(["deleteOne" , "findOneAndDelete"] , function(){
+
+  const query = this.getQuery()
+  if(query.force === true){
+    this.setQuery({...query})
+  }else{
+    this.setQuery({deletedAt : { $exists : true} , ...query})
+  }
+})
 
 export const UserModel = models.User || model<IUser>("User", userSchema);

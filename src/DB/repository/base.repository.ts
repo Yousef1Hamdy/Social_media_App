@@ -45,7 +45,6 @@ export class BaseRepository<TRawDoc> {
     return await this.model.create(data as any, options);
   }
 
-
   async createOne({
     data,
     options,
@@ -53,7 +52,7 @@ export class BaseRepository<TRawDoc> {
     data: AnyKeys<TRawDoc>;
     options?: CreateOptions | undefined;
   }): Promise<HydratedDocument<TRawDoc>> {
-    const [doc] = (await this.create({ data :[data], options })) || [];
+    const [doc] = (await this.create({ data: [data], options })) || [];
     return doc as HydratedDocument<TRawDoc>;
   }
 
@@ -88,6 +87,21 @@ export class BaseRepository<TRawDoc> {
     options?: QueryOptions<TRawDoc> | null | undefined;
   }): Promise<any> {
     const doc = this.model.findOne(filter, projection);
+    if (options?.populate) doc.populate(options.populate as PopulateOptions[]);
+    if (options?.lean) doc.lean(options.lean);
+    return await doc.exec();
+  }
+
+  async find({
+    filter,
+    projection,
+    options,
+  }: {
+    filter?: QueryFilter<TRawDoc>;
+    projection?: ProjectionType<TRawDoc> | null | undefined;
+    options?: QueryOptions<TRawDoc> | null | undefined;
+  }): Promise<any> {
+    const doc = this.model.find(filter, projection);
     if (options?.populate) doc.populate(options.populate as PopulateOptions[]);
     if (options?.lean) doc.lean(options.lean);
     return await doc.exec();
@@ -138,7 +152,11 @@ export class BaseRepository<TRawDoc> {
     update?: UpdateQuery<TRawDoc>;
     options?: QueryOptions<TRawDoc> & ReturnsNewDoc;
   }): Promise<HydratedDocument<TRawDoc> | null> {
-    return await this.model.findOneAndUpdate(filter, update, options);
+    return await this.model.findOneAndUpdate(
+      filter,
+      { ...update, $inc: { __v: 1 } },
+      options,
+    );
   }
 
   async findByIdAndUpdate({
@@ -150,7 +168,11 @@ export class BaseRepository<TRawDoc> {
     update: UpdateQuery<TRawDoc>;
     options?: QueryOptions<TRawDoc> & ReturnsNewDoc;
   }): Promise<HydratedDocument<TRawDoc> | null> {
-    return this.model.findByIdAndUpdate(_id, update, options);
+    return this.model.findByIdAndUpdate(
+      _id,
+      { ...update, $inc: { __v: 1 } },
+      options,
+    );
   }
 
   async updateOne({
@@ -162,7 +184,11 @@ export class BaseRepository<TRawDoc> {
     update: UpdateQuery<TRawDoc> | UpdateWithAggregationPipeline;
     options?: UpdateOptions | null;
   }): Promise<UpdateResult> {
-    return await this.model.updateOne(filter, update, options);
+    return await this.model.updateOne(
+      filter,
+      { ...update, $inc: { __v: 1 } },
+      options,
+    );
   }
 
   async updateMany({
@@ -174,7 +200,11 @@ export class BaseRepository<TRawDoc> {
     update: UpdateQuery<TRawDoc> | UpdateWithAggregationPipeline;
     options?: UpdateOptions | null;
   }): Promise<UpdateResult> {
-    return await this.model.updateMany(filter, update, options);
+    return await this.model.updateMany(
+      filter,
+      { ...update, $inc: { __v: 1 } },
+      options,
+    );
   }
 
   // delete

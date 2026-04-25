@@ -5,6 +5,8 @@ const common_1 = require("../../common");
 const redis_service_1 = require("../../common/services/redis.service");
 const user_model_1 = require("../../DB/models/user.model");
 const user_repository_1 = require("../../DB/repository/user.repository");
+const google_auth_library_1 = require("google-auth-library");
+const config_1 = require("../../config/config");
 class AuthenticationService {
     userRepository;
     tokenService;
@@ -88,9 +90,9 @@ class AuthenticationService {
                 ...inputs,
                 username,
                 email,
-                password: await (0, common_1.generateHash)({ plaintext: password }),
+                password,
                 gender,
-                phone: phone ? await (0, common_1.encrypt)(phone) : undefined,
+                phone,
             },
         });
         common_1.emailEmitter.emit(common_1.EmailEnum.ConfirmEmail, async () => {
@@ -144,6 +146,53 @@ class AuthenticationService {
         await account.save();
         await this.redis.deleteKey(await this.redis.keys(this.redis.otpKey({ email })));
         return { message: "Email verified successfully" };
+    };
+    async verifyGoogleAccount(idToken) {
+        const client = new google_auth_library_1.OAuth2Client();
+        const ticket = await client.verifyIdToken({
+            idToken,
+            audience: config_1.Clint_audience,
+        });
+        const payload = ticket.getPayload();
+        if (!payload?.email_verified) {
+            throw new common_1.BadRequestException("Fail to verify this account with google");
+        }
+        return payload;
+    }
+    signupWithGmail = async ({ idToken }, issuer) => {
+        const payload = await this.verifyGoogleAccount(idToken);
+        const checkUserExist = await this.userRepository.findOne({
+            filter: { email: payload.email },
+        });
+        if (checkUserExist) {
+            if (checkUserExist.provider == common_1.ProviderEnum.System) {
+                throw new common_1.ConflictException("Account already exist with different provider");
+            }
+            const account = await this.loginWithGmail(idToken, issuer);
+            return { account, status: 200 };
+        }
+        const user = await this.userRepository.createOne({
+            data: {
+                firstName: payload?.given_name,
+                lastName: payload?.family_name || " ",
+                email: payload.email,
+                provider: common_1.ProviderEnum.Google,
+                confirmEmail: new Date(),
+            },
+        });
+        return {
+            account: await this.tokenService.createLoginCredentials(user, issuer),
+        };
+    };
+    loginWithGmail = async (idToken, issuer) => {
+        const payload = await this.verifyGoogleAccount(idToken);
+        const user = await this.userRepository.findOne({
+            filter: { email: payload.email, provider: common_1.ProviderEnum.Google },
+        });
+        if (!user) {
+            throw new common_1.NotFoundException("Invalid login credentials or Invalid login approach");
+        }
+        return await this.tokenService.createLoginCredentials(user, issuer);
     };
 }
 exports.default = new AuthenticationService();

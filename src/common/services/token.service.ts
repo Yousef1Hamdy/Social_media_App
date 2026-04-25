@@ -20,6 +20,7 @@ import { randomUUID } from "node:crypto";
 import { HydratedDocument } from "mongoose";
 import { IUser } from "../interfaces";
 import { LoginResponse } from "../../modules/auth/auth.entity";
+import { Types } from "mongoose";
 
 type TokenSignature = {
   accessSignature: string;
@@ -216,5 +217,21 @@ export class TokenService {
     }
 
     return { user, decode };
+  };
+
+  createRevokeToken = async ({
+    userId,
+    jti,
+    ttl,
+  }: {
+    userId: Types.ObjectId | string;
+    jti: string;
+    ttl: number;
+  }) => {
+    await this.redis.set({
+      key: this.redis.revokeTokenKey({ userId, jti }),
+      value: jti,
+      ttl,
+    });
   };
 }

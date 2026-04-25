@@ -21,6 +21,14 @@ class BaseRepository {
             doc.lean(options.lean);
         return await doc.exec();
     }
+    async find({ filter, projection, options, }) {
+        const doc = this.model.find(filter, projection);
+        if (options?.populate)
+            doc.populate(options.populate);
+        if (options?.lean)
+            doc.lean(options.lean);
+        return await doc.exec();
+    }
     async findById({ _id, projection, options, }) {
         const doc = this.model.findOne(_id, projection);
         if (options?.populate)
@@ -30,16 +38,16 @@ class BaseRepository {
         return await doc.exec();
     }
     async findOneAndUpdate({ filter, update, options = { new: true }, }) {
-        return await this.model.findOneAndUpdate(filter, update, options);
+        return await this.model.findOneAndUpdate(filter, { ...update, $inc: { __v: 1 } }, options);
     }
     async findByIdAndUpdate({ _id, update, options = { new: true }, }) {
-        return this.model.findByIdAndUpdate(_id, update, options);
+        return this.model.findByIdAndUpdate(_id, { ...update, $inc: { __v: 1 } }, options);
     }
     async updateOne({ filter, update, options, }) {
-        return await this.model.updateOne(filter, update, options);
+        return await this.model.updateOne(filter, { ...update, $inc: { __v: 1 } }, options);
     }
     async updateMany({ filter, update, options, }) {
-        return await this.model.updateMany(filter, update, options);
+        return await this.model.updateMany(filter, { ...update, $inc: { __v: 1 } }, options);
     }
     async findOneAndDelete({ filter, }) {
         return await this.model.findOneAndDelete(filter);

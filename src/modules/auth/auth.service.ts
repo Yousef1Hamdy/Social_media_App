@@ -1,11 +1,11 @@
-import { TokenService } from './../../common/services/token.service';
+import { TokenService } from "./../../common/services/token.service";
 import {
+  BadRequestException,
   compareHash,
   ConflictException,
   emailEmitter,
   EmailEnum,
   emailTemplate,
-  encrypt,
   generateHash,
   generateOTP,
   NotFoundException,
@@ -24,7 +24,9 @@ import {
   ResendConfirmEmailDto,
   SignupDto,
 } from "./auth.dto";
-import { LoginResponse } from './auth.entity';
+import { LoginResponse } from "./auth.entity";
+import { OAuth2Client } from "google-auth-library";
+import { Clint_audience } from "../../config/config";
 
 class AuthenticationService {
   private readonly userRepository: UserRepository;
@@ -32,11 +34,11 @@ class AuthenticationService {
   private readonly redis: RedisService;
   constructor() {
     this.userRepository = new UserRepository(UserModel);
-    this.tokenService = new TokenService()
+    this.tokenService = new TokenService();
     this.redis = redisService;
   }
 
-  login = async (inputs: LoginDto, issuer: string):Promise<LoginResponse> => {
+  login = async (inputs: LoginDto, issuer: string): Promise<LoginResponse> => {
     const { email, password } = inputs;
 
     const user = await this.userRepository.findOne({
@@ -59,10 +61,8 @@ class AuthenticationService {
       throw new NotFoundException("invalid email or password");
     }
 
-    const { access_token, refresh_token } = await this.tokenService.createLoginCredentials(
-      user,
-      issuer,
-    );
+    const { access_token, refresh_token } =
+      await this.tokenService.createLoginCredentials(user, issuer);
 
     return {
       access_token,
@@ -143,9 +143,9 @@ class AuthenticationService {
         ...inputs,
         username,
         email,
-        password: await generateHash({ plaintext: password }),
+        password,
         gender,
-        phone: phone ? await encrypt(phone) : undefined,
+        phone,
       },
     });
 
@@ -224,6 +224,70 @@ class AuthenticationService {
     );
 
     return { message: "Email verified successfully" };
+  };
+
+  private async verifyGoogleAccount(idToken: string) {
+    const client = new OAuth2Client();
+
+    const ticket = await client.verifyIdToken({
+      idToken,
+      audience: Clint_audience,
+    });
+    const payload = ticket.getPayload();
+    if (!payload?.email_verified) {
+      throw new BadRequestException("Fail to verify this account with google");
+    }
+    return payload;
+  }
+
+  signupWithGmail = async (
+    { idToken }: { idToken: string },
+    issuer: string,
+  ) => {
+    const payload = await this.verifyGoogleAccount(idToken);
+
+    const checkUserExist = await this.userRepository.findOne({
+      filter: { email: payload.email as string },
+    });
+    if (checkUserExist) {
+      if (checkUserExist.provider == ProviderEnum.System) {
+        throw new ConflictException(
+          "Account already exist with different provider",
+        );
+      }
+
+      const account = await this.loginWithGmail(idToken, issuer);
+      return { account, status: 200 };
+    }
+
+    const user = await this.userRepository.createOne({
+      data: {
+        firstName: payload?.given_name,
+        lastName: payload?.family_name || " ",
+        email: payload.email,
+        provider: ProviderEnum.Google,
+        // profilePicture: payload.picture,
+        confirmEmail: new Date(),
+      },
+    });
+
+    return {
+      account: await this.tokenService.createLoginCredentials(user, issuer),
+    };
+  };
+
+  loginWithGmail = async (idToken: string, issuer: string) => {
+    const payload = await this.verifyGoogleAccount(idToken);
+    const user = await this.userRepository.findOne({
+      filter: { email: payload.email as string, provider: ProviderEnum.Google },
+    });
+    if (!user) {
+      throw new NotFoundException(
+        "Invalid login credentials or Invalid login approach",
+      );
+    }
+
+    return await this.tokenService.createLoginCredentials(user, issuer);
   };
 }
 

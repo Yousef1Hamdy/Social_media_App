@@ -71,4 +71,27 @@ router.patch("/resend-confirm-email", (0, middleware_1.validation)(validators.re
         res,
     });
 });
+router.post("/signup/gmail", async (req, res, next) => {
+    const protocol = req.protocol;
+    const host = req.get("host");
+    const issuer = `${protocol}://${host}`;
+    const { account, status = 201 } = await auth_service_1.default.signupWithGmail(req.body, issuer);
+    return (0, common_1.successResponse)({
+        res,
+        status,
+        message: "Done ",
+        data: { account },
+    });
+});
+router.post("/login/gmail", async (req, res, next) => {
+    const protocol = req.protocol;
+    const host = req.get("host");
+    const issuer = `${protocol}://${host}`;
+    const account = await auth_service_1.default.loginWithGmail(req.body, issuer);
+    return (0, common_1.successResponse)({
+        res,
+        message: "Done ",
+        data: { account },
+    });
+});
 exports.default = router;

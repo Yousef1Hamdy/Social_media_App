@@ -64,6 +64,12 @@ const userSchema = new mongoose_1.Schema({
     },
     confirmEmail: Date,
     changeCredentialTime: Date,
+    deletedAt: {
+        type: Date,
+    },
+    restoredAt: {
+        type: Date,
+    },
 }, {
     timestamps: true,
     strict: true,
@@ -81,5 +87,48 @@ userSchema
     const [firstName, lastName] = value.split(" ");
     this.firstName = firstName;
     this.lastName = lastName;
+});
+userSchema.pre("save", async function () {
+    if (this.isModified("password")) {
+        this.password = await (0, common_1.generateHash)({ plaintext: this.password });
+    }
+    if (this.phone && this.isModified("phone")) {
+        this.phone = await (0, common_1.encrypt)(this.phone);
+    }
+});
+userSchema.pre("findOne", function () {
+    const query = this.getQuery();
+    if (query.paranoid === false) {
+        this.setQuery({ ...query });
+    }
+    else {
+        this.setQuery({ deletedAt: { $exists: false }, ...query });
+    }
+});
+userSchema.pre(["updateOne", "findOneAndUpdate"], function () {
+    const update = this.getUpdate();
+    if (update.deletedAt) {
+        this.setUpdate({ ...update, $unset: { restoredAt: 1 } });
+    }
+    if (update.restoredAt) {
+        this.setUpdate({ ...update, $unset: { deletedAt: 1 } });
+        this.setQuery({ ...this.getQuery(), deletedAt: { $exists: true } });
+    }
+    const query = this.getQuery();
+    if (query.paranoid === false) {
+        this.setQuery({ ...query });
+    }
+    else {
+        this.setQuery({ deletedAt: { $exists: false }, ...query });
+    }
+});
+userSchema.pre(["deleteOne", "findOneAndDelete"], function () {
+    const query = this.getQuery();
+    if (query.force === true) {
+        this.setQuery({ ...query });
+    }
+    else {
+        this.setQuery({ deletedAt: { $exists: true }, ...query });
+    }
 });
 exports.UserModel = mongoose_1.models.User || (0, mongoose_1.model)("User", userSchema);

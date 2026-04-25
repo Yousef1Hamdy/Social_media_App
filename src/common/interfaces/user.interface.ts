@@ -10,11 +10,14 @@ export interface IUser {
   profileImage?: string;
   coverImage?: string[];
   DOB?: Date;
-  changeCredentialTime?:Date;
+  changeCredentialTime?: Date;
   confirmEmail?: Date;
   confirmedAt?: string;
   gender: GenderEnum;
   role: RoleEnum;
   username?: string;
   provider: ProviderEnum;
+
+  deletedAt?: Date;
+  restoredAt?: Date;
 }

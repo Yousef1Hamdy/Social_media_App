@@ -7,6 +7,7 @@ import {
   ProviderEnum,
   RoleEnum,
 } from "../../common";
+import { Types } from "mongoose";
 
 const userSchema: Schema<IUser> = new Schema(
   {
@@ -21,6 +22,7 @@ const userSchema: Schema<IUser> = new Schema(
       required: true,
       trim: true,
     },
+    friends :[{type : Types.ObjectId , ref : "User"}],
 
     email: {
       type: String,

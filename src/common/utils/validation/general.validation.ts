@@ -1,25 +1,22 @@
 import { z } from "zod";
-import { GenderEnum } from "../../enums";
+import { GenderEnum, ReactionEnum } from "../../enums";
+import { Types } from "mongoose";
 
 export const generalValidationFields = {
-  email: z.email({ error: "Invalid email address" }),
-
-  password: z
-    .string({ error: "Password is required" })
-    .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_])/, {
-      message:
-        "Password must contain at least one uppercase, one lowercase, one number, and one special character",
-    }),
-
+  id: z.string().refine((value) => {
+    return Types.ObjectId.isValid(value);
+  }, "Invalid objectId"),
+  email: z.email(),
+  otp: z.string({ error: "otp is required" }).regex(/^\d{6}$/),
+  phone: z
+    .string({ error: "Phone is required" })
+    .regex(/^(00201|\+201|01)(0|1|2|5)\d{8}$/),
+  password: z.string().regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*\W).{8,16}$/),
   username: z
-    .string({ error: "Username is required" })
-    .min(2, { error: "min is 2" })
-    .max(20),
-
-  confirmPassword: z.string({
-    error: "Confirm Password is required",
-  }),
-
+    .string({ error: "username is mandatory" })
+    .min(2, { error: "min is 2 char" })
+    .max(25, { error: "max is 25 char" }),
+  confirmPassword: z.string(),
   gender: z
     .number({
       error: "Gender is required",
@@ -33,7 +30,36 @@ export const generalValidationFields = {
         message: "Invalid gender",
       },
     ),
+  emoji: z.enum(ReactionEnum, {
+    message: "Invalid emoji",
+  }),
+  file: function (mimetype: string[]) {
+    return z
+      .strictObject({
+        fieldname: z.string(),
+        originalname: z.string(),
+        encoding: z.string(),
+        mimetype: z.enum(mimetype),
+        buffer: z.any().optional(),
+        path: z.string().optional(),
+        size: z.number(),
+      })
+      .superRefine((args, ctx) => {
+        if (!args.path && !args.buffer) {
+          ctx.addIssue({
+            code: "custom",
+            message: "buffer is required",
+            path: ["buffer"],
+          });
+        }
+      });
+  },
+};
 
-  phone: z.string().regex(new RegExp(/^(20|2|\+2)?01[0-25]\d{8}$/)),
-  otp: z.string().regex(new RegExp(/^\d{6}$/)),
+export const paginationValidationSchema = {
+  query: z.strictObject({
+    page: z.coerce.number().optional(),
+    size: z.coerce.number().optional(),
+    search: z.string().optional(),
+  }),
 };

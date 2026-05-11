@@ -9,6 +9,8 @@ import {
   generateHash,
   generateOTP,
   NotFoundException,
+  NotificationService,
+  notificationService,
   ProviderEnum,
   sendEmail,
 } from "../../common";
@@ -32,14 +34,17 @@ class AuthenticationService {
   private readonly userRepository: UserRepository;
   private readonly tokenService: TokenService;
   private readonly redis: RedisService;
+  private readonly notification: NotificationService;
+
   constructor() {
     this.userRepository = new UserRepository(UserModel);
     this.tokenService = new TokenService();
+    this.notification = notificationService;
     this.redis = redisService;
   }
 
   login = async (inputs: LoginDto, issuer: string): Promise<LoginResponse> => {
-    const { email, password } = inputs;
+    const { email, password , FCM } = inputs;
 
     const user = await this.userRepository.findOne({
       filter: {
@@ -59,6 +64,17 @@ class AuthenticationService {
 
     if (!match) {
       throw new NotFoundException("invalid email or password");
+    }
+
+    if(FCM){
+      await this.redis.addFCM(user._id , FCM)
+      const tokens = await this.redis.getFCMs(user._id)
+      if(tokens?.length){
+        await this.notification.sendNotifications({tokens , data :{
+          title : "Login",
+          body : `New Login at ${new Date()}`
+        }});
+      }
     }
 
     const { access_token, refresh_token } =

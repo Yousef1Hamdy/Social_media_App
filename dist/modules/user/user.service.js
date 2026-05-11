@@ -1,36 +1,34 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.UserService = void 0;
+const user_repository_1 = require("./../../DB/repository/user.repository");
 const common_1 = require("../../common");
 const config_1 = require("../../config/config");
+const user_model_1 = require("../../DB/models/user.model");
 class UserService {
     redis;
     tokenService;
+    userRepository;
     s3;
     constructor() {
         this.redis = common_1.redisService;
         this.tokenService = new common_1.TokenService();
+        this.userRepository = new user_repository_1.UserRepository(user_model_1.UserModel);
         this.s3 = common_1.s3Service;
     }
     async profileImage({ ContentType, Originalname, }, user) {
-        const oldPic = user.profileImage;
-        const { url, key } = await this.s3.createPreSignedUploadLink({
+        const { url } = await this.s3.createPreSignedUploadLink({
             path: `Users/${user._id.toString()}/profile`,
             ContentType,
             Originalname,
         });
-        user.profileImage = key;
-        await user.save();
-        if (oldPic) {
-            await common_1.s3Service.deleteAsset({ Key: oldPic });
-        }
         return { user, url };
     }
     async profileCoverImages(files, user) {
         const oldUrls = user.coverImage;
         const urls = await this.s3.uploadAssets({
             files,
-            path: `Users/${user._id.toString()}/profile`,
+            path: `Users/${user._id.toString()}/profile/cover`,
             storageApproach: common_1.StorageApproachEnum.DISK,
         });
         user.coverImage = urls;
@@ -76,6 +74,14 @@ class UserService {
             ttl: iat + config_1.REFRESH_EXPIRE_IN,
         });
         return this.tokenService.createLoginCredentials(user, issuer);
+    };
+    deleteProfile = async (user) => {
+        const account = await this.userRepository.deleteOne({ filter: { _id: user._id, force: true } });
+        if (!account.deletedCount) {
+            throw new common_1.NotFoundException("Invalid account");
+        }
+        await this.s3.deleteFolderByPrefix({ prefix: `Users/${user._id.toString()}` });
+        return account;
     };
 }
 exports.UserService = UserService;

@@ -47,4 +47,11 @@ router.post("/rotate-token", (0, middleware_1.authentication)(common_1.TokenType
         data: { ...credentials },
     });
 });
+router.delete("/", (0, middleware_1.authentication)(), async (req, res, next) => {
+    const account = await user_service_1.default.deleteProfile(req.user);
+    return (0, common_1.successResponse)({
+        res,
+        data: { account },
+    });
+});
 exports.default = router;

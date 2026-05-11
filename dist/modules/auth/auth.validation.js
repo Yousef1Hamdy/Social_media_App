@@ -19,6 +19,7 @@ exports.loginSchema = {
     body: exports.resendConfirmEmail.body
         .safeExtend({
         password: common_1.generalValidationFields.password,
+        FCM: zod_1.z.string().optional(),
     })
         .strict(),
 };

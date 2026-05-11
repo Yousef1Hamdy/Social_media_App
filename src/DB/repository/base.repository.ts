@@ -17,6 +17,7 @@ import {
 } from "mongoose";
 import { IUser } from "../../common";
 import { UpdateOptions } from "mongodb";
+import { IPaginate } from "../../common/types/paginate.types";
 
 export class BaseRepository<TRawDoc> {
   constructor(protected model: Model<TRawDoc>) {}
@@ -64,8 +65,8 @@ export class BaseRepository<TRawDoc> {
   }: {
     filter?: QueryFilter<TRawDoc>;
     projection?: ProjectionType<TRawDoc> | null | undefined;
-    options?: (QueryOptions<TRawDoc> & { lean: false }) | null | undefined;
-  }): Promise<HydratedDocument<IUser> | null>;
+    options?: (QueryOptions<TRawDoc> & { lean?: false }) | null | undefined;
+  }): Promise<HydratedDocument<TRawDoc> | null>;
 
   async findOne({
     filter,
@@ -75,7 +76,7 @@ export class BaseRepository<TRawDoc> {
     filter?: QueryFilter<TRawDoc>;
     projection?: ProjectionType<TRawDoc> | null | undefined;
     options?: (QueryOptions<TRawDoc> & { lean: true }) | null | undefined;
-  }): Promise<FlattenMaps<IUser> | null>;
+  }): Promise<FlattenMaps<TRawDoc> | null>;
 
   async findOne({
     filter,
@@ -103,8 +104,46 @@ export class BaseRepository<TRawDoc> {
   }): Promise<any> {
     const doc = this.model.find(filter, projection);
     if (options?.populate) doc.populate(options.populate as PopulateOptions[]);
+    if (options?.skip) doc.skip(options.skip);
+    if (options?.limit) doc.limit(options.limit);
     if (options?.lean) doc.lean(options.lean);
     return await doc.exec();
+  }
+
+  async paginate({
+    filter,
+    projection,
+    options = {},
+    page = undefined,
+    size = 5,
+  }: {
+    filter?: QueryFilter<TRawDoc>;
+    projection?: ProjectionType<TRawDoc> | null | undefined;
+    options?: QueryOptions<TRawDoc>;
+    page: number | string | undefined;
+    size: number | string | undefined;
+  }): Promise<IPaginate<TRawDoc>> {
+    let count = 0;
+    if (Number(page) > 0) {
+      page = parseInt(page as string);
+      size = parseInt(size as string);
+      options.skip = (page - 1) * size;
+      options.limit = size;
+      count = await this.model.countDocuments(filter);
+    }
+
+    const docs = await this.find({
+      filter: filter || {},
+      projection,
+      options,
+    });
+
+    return {
+      docs,
+      currentPage: Number(page),
+      pageSize: page ? Number(size) : undefined,
+      pages: page ? Math.ceil(count / Number(size)) : undefined,
+    };
   }
 
   async findById({
@@ -152,6 +191,13 @@ export class BaseRepository<TRawDoc> {
     update?: UpdateQuery<TRawDoc>;
     options?: QueryOptions<TRawDoc> & ReturnsNewDoc;
   }): Promise<HydratedDocument<TRawDoc> | null> {
+    if (Array.isArray(update)) {
+      update.push({ $set: { __v: { $add: ["$__v", 1] } } });
+      return await this.model.findOneAndUpdate(filter, update, {
+        ...options,
+        updatePipeline: true,
+      });
+    }
     return await this.model.findOneAndUpdate(
       filter,
       { ...update, $inc: { __v: 1 } },
@@ -238,5 +284,15 @@ export class BaseRepository<TRawDoc> {
     filter: QueryFilter<TRawDoc>;
   }): Promise<DeleteResult> {
     return await this.model.deleteMany(filter);
+  }
+
+  async softDelete(filter: QueryFilter<TRawDoc>) {
+    return this.model.updateOne(filter, {
+      deletedAt: new Date(),
+    });
+  }
+
+  async hardDelete(filter: QueryFilter<TRawDoc>) {
+    return this.model.deleteOne({...filter, force: true});
   }
 }

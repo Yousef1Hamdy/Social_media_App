@@ -6,9 +6,10 @@ import { PORT } from "./config/config";
 import { redisService } from "./common/services/redis.service";
 import { userRouter } from "./modules/user";
 import cors from "cors";
-import { s3Service, successResponse } from "./common";
+import { notificationService, s3Service, successResponse } from "./common";
 import { pipeline } from "node:stream";
 import { promisify } from "node:util";
+import { postRouter } from "./modules/post";
 
 const s3WriteStream = promisify(pipeline);
 // or
@@ -34,9 +35,36 @@ const bootstrap = async () => {
     },
   );
 
+  app.post(
+    "/send-notification",
+    async (
+      req: express.Request,
+      res: express.Response,
+      next: express.NextFunction,
+    ): Promise<express.Response> => {
+      const { token } = req.body;
+
+      if (!token) {
+        return res.status(400).json({
+          message: "FCM token is required",
+        });
+      }
+
+      const message = await notificationService.sendNotification({
+        token,
+        data: {
+          title: "First notification",
+          body: "Hello world",
+        },
+      });
+      return res.status(200).json({ message });
+    },
+  );
+
   // Application-Routing
   app.use("/auth", authRouter);
   app.use("/user", userRouter);
+  app.use("/post", postRouter);
 
   app.get(
     "/uploads/*path",

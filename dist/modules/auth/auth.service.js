@@ -11,13 +11,15 @@ class AuthenticationService {
     userRepository;
     tokenService;
     redis;
+    notification;
     constructor() {
         this.userRepository = new user_repository_1.UserRepository(user_model_1.UserModel);
         this.tokenService = new token_service_1.TokenService();
+        this.notification = common_1.notificationService;
         this.redis = redis_service_1.redisService;
     }
     login = async (inputs, issuer) => {
-        const { email, password } = inputs;
+        const { email, password, FCM } = inputs;
         const user = await this.userRepository.findOne({
             filter: {
                 email,
@@ -35,6 +37,16 @@ class AuthenticationService {
         });
         if (!match) {
             throw new common_1.NotFoundException("invalid email or password");
+        }
+        if (FCM) {
+            await this.redis.addFCM(user._id, FCM);
+            const tokens = await this.redis.getFCMs(user._id);
+            if (tokens?.length) {
+                await this.notification.sendNotifications({ tokens, data: {
+                        title: "Login",
+                        body: `New Login at ${new Date()}`
+                    } });
+            }
         }
         const { access_token, refresh_token } = await this.tokenService.createLoginCredentials(user, issuer);
         return {

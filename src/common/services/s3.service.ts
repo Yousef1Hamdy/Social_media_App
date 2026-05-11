@@ -5,6 +5,8 @@ import {
   DeleteObjectsCommand,
   DeleteObjectsCommandOutput,
   GetObjectCommand,
+  ListObjectsV2Command,
+  ListObjectsV2CommandOutput,
   ObjectCannedACL,
   PutObjectCommand,
   S3Client,
@@ -267,6 +269,37 @@ export class S3Service {
     const response = await this.client.send(command);
 
     return response;
+  }
+
+  async listFolderDir({
+    Bucket = AWS_BUCKET_NAME,
+    prefix,
+  }: {
+    Bucket?: string;
+    prefix: string;
+  }): Promise<ListObjectsV2CommandOutput> {
+    const command = new ListObjectsV2Command({
+      Bucket,
+      Prefix: `${APPLICATION_NAME}/${prefix}`,
+    });
+
+    const response = await this.client.send(command);
+
+    return response;
+  }
+
+  async deleteFolderByPrefix({
+    Bucket = AWS_BUCKET_NAME,
+    prefix,
+  }: {
+    Bucket?: string;
+    prefix: string;
+  }): Promise<DeleteObjectsCommandOutput> {
+    const result = await this.listFolderDir({ Bucket, prefix });
+    const Keys = result.Contents?.map((ele) => {
+      return { Key: ele.Key };
+    }) as { Key: string }[];
+    return await this.deleteAssets({ Bucket, Keys });
   }
 }
 

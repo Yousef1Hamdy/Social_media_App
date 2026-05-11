@@ -63,7 +63,7 @@ export class RedisService {
     ttl,
   }: {
     key: string;
-    value: string|number | object;
+    value: string | number | object;
     ttl?: number | undefined;
   }): Promise<string | null> => {
     try {
@@ -83,7 +83,7 @@ export class RedisService {
     ttl,
   }: {
     key: string;
-    value: string |number| object;
+    value: string | number | object;
     ttl?: number | undefined;
   }): Promise<string | number | null> => {
     try {
@@ -170,20 +170,41 @@ export class RedisService {
     }
   };
 
-deleteKey = async (
-  key: string | string[]
-): Promise<number> => {
-  try {
-    if (!key || (Array.isArray(key) && !key.length)) return 0;
+  deleteKey = async (key: string | string[]): Promise<number> => {
+    try {
+      if (!key || (Array.isArray(key) && !key.length)) return 0;
 
-    return Array.isArray(key)
-      ? await this.client.del(key)
-      : await this.client.del(key);
-  } catch (error) {
-    console.log(`Fail in redis delete operation ${error}`);
-    return 0;
+      return Array.isArray(key)
+        ? await this.client.del(key)
+        : await this.client.del(key);
+    } catch (error) {
+      console.log(`Fail in redis delete operation ${error}`);
+      return 0;
+    }
+  };
+
+  FCM_key(userId: Types.ObjectId | string) {
+    return `user:FCM:${userId.toString()}`;
   }
-};
+  async addFCM(userId: Types.ObjectId | string, FCMToken: string) {
+    return await this.client.sAdd(this.FCM_key(userId), FCMToken);
+  }
+
+  async removeFCM(userId: Types.ObjectId | string, FCMToken: string) {
+    return await this.client.sRem(this.FCM_key(userId), FCMToken);
+  }
+
+  async getFCMs(userId: Types.ObjectId | string) {
+    return await this.client.sMembers(this.FCM_key(userId));
+  }
+
+  async hasFCMs(userId: Types.ObjectId | string) {
+    return await this.client.sCard(this.FCM_key(userId));
+  }
+
+  async removeFCMUser(userId: Types.ObjectId | string) {
+    return await this.client.del(this.FCM_key(userId));
+  }
 }
 
 export const redisService = new RedisService();

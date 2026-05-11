@@ -25,9 +25,34 @@ class BaseRepository {
         const doc = this.model.find(filter, projection);
         if (options?.populate)
             doc.populate(options.populate);
+        if (options?.skip)
+            doc.skip(options.skip);
+        if (options?.limit)
+            doc.limit(options.limit);
         if (options?.lean)
             doc.lean(options.lean);
         return await doc.exec();
+    }
+    async paginate({ filter, projection, options = {}, page = undefined, size = 5, }) {
+        let count = 0;
+        if (Number(page) > 0) {
+            page = parseInt(page);
+            size = parseInt(size);
+            options.skip = (page - 1) * size;
+            options.limit = size;
+            count = await this.model.countDocuments(filter);
+        }
+        const docs = await this.find({
+            filter: filter || {},
+            projection,
+            options,
+        });
+        return {
+            docs,
+            currentPage: Number(page),
+            pageSize: page ? Number(size) : undefined,
+            pages: page ? Math.ceil(count / Number(size)) : undefined,
+        };
     }
     async findById({ _id, projection, options, }) {
         const doc = this.model.findOne(_id, projection);
@@ -38,6 +63,13 @@ class BaseRepository {
         return await doc.exec();
     }
     async findOneAndUpdate({ filter, update, options = { new: true }, }) {
+        if (Array.isArray(update)) {
+            update.push({ $set: { __v: { $add: ["$__v", 1] } } });
+            return await this.model.findOneAndUpdate(filter, update, {
+                ...options,
+                updatePipeline: true,
+            });
+        }
         return await this.model.findOneAndUpdate(filter, { ...update, $inc: { __v: 1 } }, options);
     }
     async findByIdAndUpdate({ _id, update, options = { new: true }, }) {
@@ -60,6 +92,14 @@ class BaseRepository {
     }
     async deleteMany({ filter, }) {
         return await this.model.deleteMany(filter);
+    }
+    async softDelete(filter) {
+        return this.model.updateOne(filter, {
+            deletedAt: new Date(),
+        });
+    }
+    async hardDelete(filter) {
+        return this.model.deleteOne({ ...filter, force: true });
     }
 }
 exports.BaseRepository = BaseRepository;

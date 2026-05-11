@@ -3,6 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.UserModel = void 0;
 const mongoose_1 = require("mongoose");
 const common_1 = require("../../common");
+const mongoose_2 = require("mongoose");
 const userSchema = new mongoose_1.Schema({
     firstName: {
         type: String,
@@ -14,6 +15,7 @@ const userSchema = new mongoose_1.Schema({
         required: true,
         trim: true,
     },
+    friends: [{ type: mongoose_2.Types.ObjectId, ref: "User" }],
     email: {
         type: String,
         required: true,

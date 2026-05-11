@@ -38,10 +38,7 @@ router.patch(
   authentication(),
   authorization(endPoint.profile),
   async (req: Request, res: Response, next: NextFunction) => {
-    const data = await userService.profileImage(
-      req.body,
-      req.user,
-    );
+    const data = await userService.profileImage(req.body, req.user);
     return successResponse({
       res,
       data,
@@ -112,6 +109,18 @@ router.post(
       status: 201,
       message: "",
       data: { ...credentials },
+    });
+  },
+);
+
+router.delete(
+  "/",
+  authentication(),
+  async (req, res, next) => {
+    const account = await userService.deleteProfile(req.user);
+    return successResponse({
+      res,
+      data: { account },
     });
   },
 );
